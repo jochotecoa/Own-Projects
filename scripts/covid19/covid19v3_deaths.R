@@ -4,7 +4,7 @@ negToZero = function(x) {
 }
 
 # Load the package required to read JSON files.
-source('functions.R')
+source('scripts/utils/functions.R')
 forceLibrary(c("rjson", 'dplyr', 'ggplot2'))
 
 library(utils)
@@ -26,34 +26,43 @@ data <- read.csv(tf)
 
 world_data = data %>%  arrange(country, year_week)
 
-cases_world_data = world_data %>% 
-  filter(indicator == 'cases',
+deaths_world_data = world_data %>% 
+  filter(indicator == 'deaths',
          population >= 7000000,
          # grepl('2020', year_week),
          !is.na(country_code)) %>% 
-  mutate(cases_per_population = weekly_count / population)
+  naToZero() %>% 
+  mutate(deaths_per_population = weekly_count / population)
 
-covid_cases_formatted <- cases_world_data %>%
+df <- deaths_world_data %>% 
+  group_by(country_code) %>%
+  # summarise(value = sum(deaths_per_population)) %>%
+  mutate(csum = cumsum(deaths_per_population))
+df
+
+
+covid_deaths_formatted <- df %>%
+  filter(csum > 0) %>% 
   # select(-note) %>% 
   # na.omit() %>% 
   group_by(year_week) %>%
   # The * 1 makes it possible to have non-integer ranks while sliding
-  mutate(rank = rank(-cases_per_population),
-         cases_per_population_rel = cases_per_population/cases_per_population[rank==1],
-         Value_lbl = paste0("",round(cases_per_population*1e6))) %>%
+  mutate(rank = rank(-csum),
+         csum_rel = csum/csum[rank==1],
+         Value_lbl = paste0("",round(csum*1e6))) %>%
   group_by(country) %>% 
   filter(rank <=10) %>%
   ungroup() %>% 
   as.data.frame()
 
 
-staticplot = ggplot(covid_cases_formatted, aes(rank, group = country, 
+staticplot = ggplot(covid_deaths_formatted, aes(rank, group = country, 
                                        fill = as.factor(country), color = as.factor(country))) +
-  geom_tile(aes(y = cases_per_population/2,
-                height = cases_per_population, 
+  geom_tile(aes(y = csum/2,
+                height = csum, 
                 width = 0.9), alpha = 0.8, color = NA) +
-  geom_text(aes(y = 0, label = paste(country, " ")), vjust = 0.2, hjust = 1) +
-  geom_text(aes(y= cases_per_population, label = Value_lbl, hjust=0), show.legend = T) +
+  geom_text(aes(y = 0, label = paste(country, " ")), vjust = 0.2, hjust = 1, size = 6) +
+  geom_text(aes(y= csum, label = Value_lbl, hjust=0), size = 6, show.legend = T) +
   coord_flip(clip = "off", expand = FALSE) +
   scale_y_continuous(labels = scales::comma) +
   scale_x_reverse() +
@@ -81,22 +90,23 @@ staticplot = ggplot(covid_cases_formatted, aes(rank, group = country,
 
 anim = staticplot + transition_states(year_week, transition_length = 8, state_length = 2, wrap = F) +
   view_follow(fixed_x = TRUE)  +
-  labs(title = 'GDP per Year : {closest_state}',  
+  labs(title = 'Total COVID19 deaths : {closest_state}',  
        subtitle  =  "Top 10 Countries",
-       caption  = "GDP in Billions USD | Data Source: World Bank Data") 
+       caption  = "deaths x 10^6 / Population | Data Source: ECDC") 
 
+anim
 
 animate(plot = anim, duration = 100, fps = 10)
 
 # anim
 
 library(gifski)
-
-animate(anim, 200, fps = 20,  width = 1200, height = 1000, 
-        renderer = gifski_renderer("gganim.gif"))
+  
+animate(anim, 200, duration = 100, fps = 10, 
+        renderer = gifski_renderer("gganim_deaths.gif"))
 
 library(av)
 
-animate(anim, 200, fps = 20,  width = 1200, height = 1000, 
-        renderer = ffmpeg_renderer()) -> for_mp4
-
+animate(anim, 200, duration = 100, fps = 10,  width = 1920, height = 1080, res = 100,
+        renderer = av_renderer()) -> for_mp4
+anim_save("animation.mp4", animation = for_mp4 )

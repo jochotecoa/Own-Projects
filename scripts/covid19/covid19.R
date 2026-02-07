@@ -4,7 +4,7 @@ negToZero = function(x) {
 }
 
 # Load the package required to read JSON files.
-source('functions.R')
+source('scripts/utils/functions.R')
 forceLibrary(c("rjson", 'dplyr', 'ggplot2'))
 
 library(utils)
