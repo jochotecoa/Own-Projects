@@ -86,11 +86,16 @@ staticplot = ggplot(covid_cases_formatted, aes(rank, group = country,
 
         )
 
-anim = staticplot + transition_states(year_week, transition_length = 8, state_length = 2, wrap = F) +
-  view_follow(fixed_x = TRUE)  +
-  labs(title = 'Total COVID19 Cases : {closest_state}',  
+anim = staticplot +
+  transition_states(year_week, transition_length = 4, state_length = 2, wrap = FALSE) +
+  view_follow(fixed_x = TRUE) +
+  enter_grow() +
+  exit_shrink() +
+  shadow_trail(max_frames = 12, alpha = 0.15, size = 0.3) +
+  ease_aes("sine-in-out") +
+  labs(title = 'Total COVID19 Cases : {closest_state}',
        subtitle  =  "Top 10 Countries",
-       caption  = "Cases x 10^6 / Population | Data Source: ECDC") 
+       caption  = "Cases x 10^6 / Population | Data Source: ECDC")
 
 
 animate(plot = anim, duration = 100, fps = 10)
@@ -106,4 +111,3 @@ library(av)
 
 animate(anim, 200, fps = 20,  width = 1200, height = 1000, 
         renderer = ffmpeg_renderer()) -> for_mp4
-
