@@ -46,7 +46,7 @@ Implementation of various ML algorithms and deep learning architectures.
 ## 📈 How to Use
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/own-projects.git
+   https://github.com/jochotecoa/Own-Projects.git
    ```
 2. **Restore the environment:**
    Open the `.Rproj` file in RStudio. `renv` should automatically prompt you to restore packages. If not, run:
